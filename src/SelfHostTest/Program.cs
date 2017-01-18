@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting;
+using PeterKottas.DotNetCore.WindowsService;
 
 namespace SelfHostTest
 {
@@ -11,14 +7,40 @@ namespace SelfHostTest
     {
         public static void Main(string[] args)
         {
-            var host = new WebHostBuilder()
-                .UseKestrel()
-                .UseContentRoot(Directory.GetCurrentDirectory())
-                .UseIISIntegration()
-                .UseStartup<Startup>()
-                .Build();
+            ServiceRunner<ExampleService>.Run(config =>
+            {
+                var name = config.GetDefaultName();
+                config.Service(serviceConfig =>
+                {
+                    serviceConfig.ServiceFactory((extraArguments) =>
+                    {
+                        return new ExampleService();
+                    });
 
-            host.Run();
+                    serviceConfig.OnStart((service, extraParams) =>
+                    {
+                        Console.WriteLine("Service {0} started", name);
+                        service.Start();
+                    });
+
+                    serviceConfig.OnStop(service =>
+                    {
+                        Console.WriteLine("Service {0} stopped", name);
+                        service.Stop();
+                    });
+
+                    serviceConfig.OnError(e =>
+                    {
+                        Console.WriteLine("Service {0} errored with exception : {1}", name, e.Message);
+                    });
+                });
+            });
+            if (!Console.IsInputRedirected)
+            {
+                Console.ReadKey();
+            }
+
+
         }
     }
 }
